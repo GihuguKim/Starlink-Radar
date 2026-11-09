@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Apex Frontier Labs // Starlink Bujumbura Tracking Radar</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: #030712;
+      color: #f3f4f6;
+    }
+    .mono {
+      font-family: 'Fira Code', monospace;
+    }
+    .neon-panel {
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      box-shadow: 0 0 25px rgba(56, 189, 248, 0.08);
+    }
+    .radar-glass {
+      background: radial-gradient(circle at center, rgba(14, 165, 233, 0.04) 0%, rgba(3, 7, 18, 0.95) 70%);
+      backdrop-filter: blur(12px);
+    }
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: #030712; }
+    ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #0284c7; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-cyan-500 selection:text-white">
+
+  <!-- ================= TOP AEROSPACE DISPATCH HEADER ================= -->
+  <header class="border-b border-slate-800/80 bg-slate-950/90 sticky top-0 z-50 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-600 via-sky-500 to-indigo-500 flex items-center justify-center shadow-lg shadow-cyan-500/25">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+          </svg>
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <span class="text-xs uppercase tracking-widest text-cyan-400 font-semibold mono">Apex Frontier Labs // #SPX-0101</span>
+            <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-cyan-950 text-cyan-300 border border-cyan-800/50">Phased-Array v4.2</span>
+          </div>
+          <!-- TASK 1 TARGET: Header Branding Call-sign -->
+          <h1 id="app-heading" class="text-base sm:text-lg font-bold text-white tracking-tight">
+            Gyanna Kimana // Starlink Bujumbura LEO Tracking & phased-Array Gateway
+          </h1>
+        </div>
+      </div>
+      
+      <!-- Telemetry Actions -->
+      <div class="flex items-center space-x-3">
+        <div class="hidden sm:flex flex-col text-right">
+          <span class="text-[11px] text-slate-400">Ground Station Coordinates:</span>
+          <span class="text-xs font-semibold text-cyan-300 mono">3.3822° S, 29.3644° E (Bujumbura)</span>
+        </div>
+        <button id="btn-export-telemetry" class="px-3.5 py-1.5 rounded-lg text-xs font-medium bg-cyan-950/60 hover:bg-cyan-900/80 text-cyan-200 border border-cyan-700/60 transition flex items-center space-x-1.5 shadow-sm">
+          <svg class="w-4 h-4 text-cyan-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+          </svg>
+          <span>Export State JSON</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ================= MAIN RADAR COCKPIT ================= -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+    <!-- LEFT COLUMN: INTERACTIVE CANVAS RADAR STAGE (8 COLS) -->
+    <div class="lg:col-span-8 flex flex-col space-y-4">
+
+      <!-- RADAR COMMAND BAR -->
+      <div class="flex flex-wrap items-center justify-between gap-3 bg-slate-900/60 p-3 rounded-xl border border-slate-800/80">
+        <div class="flex items-center space-x-3 text-xs">
+          <span class="text-cyan-400 mono font-semibold">Phased-Array Mode:</span>
+          <select id="select-tracking-mode" class="bg-slate-950 border border-slate-700 text-slate-200 text-xs rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-cyan-500 mono">
+            <option value="auto">Autonomous Handoff Mode (Optimal Elevation)</option>
+            <option value="manual">Manual Cursor Beam Lock (Point-and-Track)</option>
+            <option value="all-pass">Constellation Pass Simulator (12 Satellites)</option>
+          </select>
+        </div>
+
+        <div class="flex items-center space-x-2 text-xs">
+          <button id="btn-toggle-sweep" class="px-2.5 py-1.5 rounded-lg bg-cyan-950/60 text-cyan-300 border border-cyan-800/60 transition flex items-center space-x-1.5">
+            <span class="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
+            <span>Sweep Beam: ON</span>
+          </button>
+          <button id="btn-spawn-sat" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition">
+            + Inject Satellite
+          </button>
+          <button id="btn-reset-radar" class="px-2.5 py-1.5 rounded-lg bg-rose-950/40 hover:bg-rose-900/50 text-rose-300 border border-rose-800/50 transition">
+            Reset LEO Fleet
+          </button>
+        </div>
+      </div>
+
+      <!-- CANVAS SIMULATION STAGE -->
+      <div class="relative w-full aspect-square sm:aspect-[16/11] bg-slate-950 rounded-2xl overflow-hidden neon-panel group radar-glass">
+        <canvas id="radarCanvas" class="w-full h-full block cursor-crosshair"></canvas>
+
+        <!-- Live On-Canvas Phased-Array Tracking HUD -->
+        <div class="absolute top-4 left-4 pointer-events-none flex flex-col space-y-1.5 bg-slate-950/85 border border-slate-800 p-3 rounded-xl backdrop-blur-md mono text-[11px] shadow-lg">
+          <div class="flex items-center justify-between text-slate-400 space-x-4">
+            <span>TRACKED SAT:</span>
+            <span id="hud-sat-callsign" class="text-cyan-300 font-semibold">STARLINK-2401</span>
+          </div>
+          <div class="flex items-center justify-between text-slate-400 space-x-4">
+            <span>SLANT RANGE (r):</span>
+            <span id="hud-range" class="text-white font-bold">582.4 km</span>
+          </div>
+          <div class="flex items-center justify-between text-slate-400 space-x-4">
+            <span>AZIMUTH (θ rad):</span>
+            <span id="hud-azimuth" class="text-cyan-400 font-semibold">1.42 rad (81.4°)</span>
+          </div>
+          <div class="flex items-center justify-between text-slate-400 space-x-4">
+            <span>ELEVATION ANGLE:</span>
+            <span id="hud-elevation" class="text-emerald-400 font-semibold">48.2° (LOS Locked)</span>
+          </div>
+          <div class="flex items-center justify-between text-slate-400 space-x-4">
+            <span>DOPPLER FREQ SHIFT:</span>
+            <span id="hud-doppler" class="text-amber-400 font-semibold">-34.8 kHz (Receding)</span>
+          </div>
+          <div class="flex items-center justify-between text-slate-400 space-x-4">
+            <span>LINK QUALITY (SNR):</span>
+            <span id="hud-snr" class="text-emerald-400 font-semibold">14.8 dB (980 Mbps)</span>
+          </div>
+        </div>
+
+        <!-- Terminal Status Pill -->
+        <div class="absolute bottom-3 left-4 pointer-events-none text-[10px] text-slate-400 mono bg-slate-950/80 px-2.5 py-1 rounded border border-slate-800">
+          📍 BUJUMBURA GROUND GATEWAY [ALT: 772m] // ACTIVE TRACKING RADIUS: 650 km
+        </div>
+
+        <!-- Render Loop Clock -->
+        <div class="absolute bottom-3 right-4 pointer-events-none text-[10px] text-cyan-400 mono bg-slate-950/80 px-2.5 py-1 rounded border border-cyan-900/50">
+          60.0 FPS // RUNTIME TELEMETRY KINEMATICS
+        </div>
+      </div>
+
+      <!-- INTERACTIVE RADAR HARDWARE SLIDERS -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-slate-900/60 p-4 rounded-xl border border-slate-800/80">
+        <div>
+
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Beam Sweep Speed (ω rad/s)</label>
+          <input id="slider-sweep-speed" type="range" min="0.5" max="3.5" step="0.1" value="1.5" class="w-full accent-cyan-500">
+          <div class="flex justify-between text-[10px] mono text-slate-500 mt-1">
+            <span>Slow (0.5)</span>
+            <span id="val-sweep-speed" class="text-cyan-400">1.5 rad/s</span>
+            <span>Turbo (3.5)</span>
+          </div>
+        </div>
+        <div>
+          <!-- TASK 3 TARGET: Minimum Elevation Threshold -->
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Horizon Mask Cutoff Angle</label>
+          <input id="slider-horizon-mask" type="range" min="5" max="35" step="5" value="15" class="w-full accent-cyan-500">
+          <div class="flex justify-between text-[10px] mono text-slate-500 mt-1">
+            <span>Low (5°)</span>
+            <span id="val-horizon-mask" class="text-cyan-400">15° Horizon Cutoff</span>
+            <span id="max-horizon-label">Mountain (35°)</span>
+          </div>
+        </div>
+        <div>
+
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Orbital Cruise Speed (v_sat)</label>
+          <input id="slider-sat-speed" type="range" min="0.3" max="2.5" step="0.1" value="1.0" class="w-full accent-cyan-500">
+          <div class="flex justify-between text-[10px] mono text-slate-500 mt-1">
+            <span>0.3x Orbital</span>
+            <span id="val-sat-speed" class="text-cyan-400">1.0x (27,000 km/h)</span>
+            <span>2.5x Warp</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT COLUMN: SATELLITE ROSTER & MATHEMATICAL TELEMETRY (4 COLS) -->
+    <div class="lg:col-span-4 flex flex-col space-y-4">
+
+      <!-- FLEET ROSTER & CONSTELLATION STATUS -->
+      <div class="bg-slate-900/60 p-4 rounded-2xl border border-slate-800/80 flex flex-col space-y-3">
+        <div class="flex items-center justify-between border-b border-slate-800/80 pb-2">
+          <h2 class="text-xs uppercase tracking-wider font-bold text-slate-200 flex items-center space-x-1.5">
+            <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+            <span>Active Overhead Constellation</span>
+          </h2>
+          <span id="metric-sat-count" class="text-[10px] mono text-cyan-400 bg-cyan-950/70 px-2 py-0.5 rounded border border-cyan-800/40">4 in Field</span>
+        </div>
+
+        <div id="satellite-roster-list" class="space-y-2 text-xs max-h-52 overflow-y-auto pr-1">
+          <!-- Dynamically populated satellite list items -->
+        </div>
+      </div>
+
+      <!-- REAL-TIME TELEMETRY JSON GENERATOR -->
+      <div class="bg-slate-900/60 p-4 rounded-2xl border border-slate-800/80 flex-1 flex flex-col space-y-2">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+          <span class="text-xs font-bold text-slate-300 mono flex items-center space-x-1.5">
+            <span class="text-cyan-400">&gt;_</span>
+            <span>Telemetry Broadcast Stream</span>
+          </span>
+          <span class="text-[10px] text-slate-500 mono">JSON State Vector</span>
+        </div>
+
+        <pre id="telemetry-terminal" class="flex-1 w-full p-3 rounded-xl bg-slate-950 border border-slate-800 text-[11px] mono text-cyan-300/90 overflow-x-auto whitespace-pre font-normal leading-relaxed"></pre>
+
+
+        <p class="text-[11px] text-slate-400 italic">
+
+          💡 Evaluates r = √(Δx² + Δy²) and θ = atan2(Δy, Δx) on every 60 FPS tick.
+        </p>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- ================= ENGINEERING CLINIC: PURE MATH 1 & 2 SPECIFICATIONS ================= -->
+  <section class="max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 pt-0">
+    <div class="bg-slate-900/50 rounded-2xl border border-slate-800 p-6 space-y-6">
+      
+      <div class="flex items-center space-x-3 border-b border-slate-800 pb-4">
+        <div class="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 font-bold mono text-sm">
+          01
+        </div>
+        <div>
+          <h2 class="text-base font-bold text-white tracking-tight">The Space Systems Math & Flight Software Architecture</h2>
+          <p class="text-xs text-slate-400">How this mission connects Pearson Edexcel IAL Pure Mathematics (Vectors, Radians, Circles) with real-world orbital telecommunications.</p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-xs text-slate-300">
+        <div class="p-4 rounded-xl bg-slate-950/60 border border-slate-800/60 space-y-2">
+          <div class="text-cyan-400 font-bold uppercase tracking-wider text-[11px] mono">1. Cartesian-to-Polar Transmutation</div>
+          <p class="leading-relaxed text-slate-400">
+            A satellite position in the canvas buffer is $(x, y)$. To command phased-array phase shifters, the radar converts this to polar coordinates relative to the station origin:
+          </p>
+          <div class="text-[11px] mono text-cyan-300 bg-slate-900 p-2 rounded border border-slate-800">
+            dx = sat.x - originX;<br>
+            dy = -(sat.y - originY);<br>
+            r = Math.hypot(dx, dy);<br>
+            theta = Math.atan2(dy, dx);
+          </div>
+        </div>
+
+        <div class="p-4 rounded-xl bg-slate-950/60 border border-slate-800/60 space-y-2">
+          <div class="text-indigo-400 font-bold uppercase tracking-wider text-[11px] mono">2. Pure 2 Circle Loci & Range Gates</div>
+          <p class="leading-relaxed text-slate-400">
+            
+
+            Concentric range rings are circular loci (x - a)² + (y - b)² = R² representing distance thresholds (150 km, 300 km, 450 km, 600 km). When r ≤ 600 km, line-of-sight acquisition triggers.
+          </p>
+          <div class="text-[11px] mono text-indigo-300 bg-slate-900 p-2 rounded border border-slate-800">
+            [80, 160, 240, 320].forEach(R => {<br>
+            &nbsp;&nbsp;ctx.arc(cx, cy, R, 0, Math.PI * 2);<br>
+            });
+          </div>
+        </div>
+
+        <div class="p-4 rounded-xl bg-slate-950/60 border border-slate-800/60 space-y-2">
+          <div class="text-emerald-400 font-bold uppercase tracking-wider text-[11px] mono">3. Doppler Shift Kinematics</div>
+          <p class="leading-relaxed text-slate-400">
+
+            As a satellite cruises along its vector, slant range changes at rate dr/dt. If range is decreasing (Δr < 0), the carrier frequency blue-shifts (Δf > 0); as it recedes, it red-shifts:
+          </p>
+          <div class="text-[11px] mono text-emerald-300 bg-slate-900 p-2 rounded border border-slate-800">
+            rangeRate = (currentR - lastR) / dt;<br>
+            dopplerShift_kHz = -(f0 * rangeRate) / c;
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ================= JAVASCRIPT RADAR & ORBITAL ENGINE ================= -->
+  <script>
+    let beamStrokeColor = '#f59e0b';
+    let beamGlowColor = 'rgba(245, 158, 11, 0.35)';
+        (function() {
+      // Elements
+      const canvas = document.getElementById('radarCanvas');
+      const ctx = canvas.getContext('2d');
+      const selectTrackingMode = document.getElementById('select-tracking-mode');
+      const btnToggleSweep = document.getElementById('btn-toggle-sweep');
+      const btnSpawnSat = document.getElementById('btn-spawn-sat');
+      const btnResetRadar = document.getElementById('btn-reset-radar');
+      const btnExportTelemetry = document.getElementById('btn-export-telemetry');
+
+      // Sliders
+      const sliderSweepSpeed = document.getElementById('slider-sweep-speed');
+      const valSweepSpeed = document.getElementById('val-sweep-speed');
+      const sliderHorizonMask = document.getElementById('slider-horizon-mask');
+      const valHorizonMask = document.getElementById('val-horizon-mask');
+      const sliderSatSpeed = document.getElementById('slider-sat-speed');
+      const valSatSpeed = document.getElementById('val-sat-speed');
+
+      // Telemetry HUD Elements
+      const hudSatCallsign = document.getElementById('hud-sat-callsign');
+      const hudRange = document.getElementById('hud-range');
+      const hudAzimuth = document.getElementById('hud-azimuth');
+      const hudElevation = document.getElementById('hud-elevation');
+      const hudDoppler = document.getElementById('hud-doppler');
+      const hudSnr = document.getElementById('hud-snr');
+      const telemetryTerminal = document.getElementById('telemetry-terminal');
+      const satelliteRosterList = document.getElementById('satellite-roster-list');
+      const metricSatCount = document.getElementById('metric-sat-count');
+
+      // Simulation Parameters
+      let sweepAngle = 0;
+      let sweepSpeed = parseFloat(sliderSweepSpeed.value);
+      let isSweepActive = true;
+      let horizonMaskAngle = parseFloat(sliderHorizonMask.value);
+      let satSpeedFactor = parseFloat(sliderSatSpeed.value);
+      let trackingMode = selectTrackingMode.value;
+
+      // TASK 2 TARGET: Phased-Array Beam Glow Palette
+      // Default: High-Intensity Neon Cyan ('#00f0ff')
+      let beamStrokeColor = '#00f0ff';
+      let beamGlowColor = 'rgba(0, 240, 255, 0.35)';
+
+      // Mouse State for Manual Point-and-Track Mode
+      const mouse = { x: null, y: null, active: false };
+
+      // High-DPI Canvas Resizing
+      function resizeCanvas() {
+        const rect = canvas.getBoundingClientRect();
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = rect.width * dpr;
+        canvas.height = rect.height * dpr;
+        ctx.scale(dpr, dpr);
+      }
+      window.addEventListener('resize', resizeCanvas);
+      setTimeout(resizeCanvas, 40);
+
+      // Satellite Object Constructor
+      let satIdCounter = 101;
+      function createSatellite(customName = null) {
+        const rect = canvas.getBoundingClientRect();
+        const w = rect.width || 800;
+        const h = rect.height || 600;
+
+        // Spawn along perimeter trajectories
+        const spawnEdge = Math.floor(Math.random() * 4);
+        let x, y, vx, vy;
+        const baseSpeed = (1.2 + Math.random() * 0.8);
+
+        if (spawnEdge === 0) { // Top edge traveling down
+          x = Math.random() * w;
+          y = -20;
+          vx = (Math.random() - 0.5) * 1.5;
+          vy = baseSpeed;
+        } else if (spawnEdge === 1) { // Bottom edge traveling up
+          x = Math.random() * w;
+          y = h + 20;
+          vx = (Math.random() - 0.5) * 1.5;
+          vy = -baseSpeed;
+        } else if (spawnEdge === 2) { // Left edge traveling right
+          x = -20;
+          y = Math.random() * h;
+          vx = baseSpeed;
+          vy = (Math.random() - 0.5) * 1.5;
+        } else { // Right edge traveling left
+          x = w + 20;
+          y = Math.random() * h;
+          vx = -baseSpeed;
+          vy = (Math.random() - 0.5) * 1.5;
+        }
+
+        return {
+          id: `sat-${satIdCounter++}`,
+          callsign: customName || `STARLINK-${2400 + Math.floor(Math.random() * 800)}`,
+          x: x,
+          y: y,
+          vx: vx,
+          vy: vy,
+          altitudeKm: 550 + (Math.random() * 10 - 5),
+          lastRange: 0,
+          currentRange: 0,
+          azimuthRad: 0,
+          elevationDeg: 0,
+          rangeRateKmS: 0,
+          snrDb: 12 + Math.random() * 4,
+          locked: false,
+          trail: []
+        };
+      }
+
+      // Fleet Initializer
+      let satellites = [];
+      function resetConstellation() {
+        satellites = [];
+        for (let i = 0; i < 4; i++) {
+          satellites.push(createSatellite());
+        }
+      }
+      setTimeout(resetConstellation, 80);
+
+      // Mouse Listeners for Manual Lock
+      canvas.addEventListener('mousemove', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        mouse.x = e.clientX - rect.left;
+        mouse.y = e.clientY - rect.top;
+        mouse.active = true;
+      });
+
+      canvas.addEventListener('mouseleave', () => {
+        mouse.active = false;
+      });
+
+      // Controls Listeners
+      sliderSweepSpeed.addEventListener('input', (e) => {
+        sweepSpeed = parseFloat(e.target.value);
+        valSweepSpeed.textContent = `${sweepSpeed.toFixed(1)} rad/s`;
+      });
+
+      sliderHorizonMask.addEventListener('input', (e) => {
+        horizonMaskAngle = parseFloat(e.target.value);
+        valHorizonMask.textContent = `${horizonMaskAngle}° Horizon Cutoff`;
+      });
+
+      sliderSatSpeed.addEventListener('input', (e) => {
+        satSpeedFactor = parseFloat(e.target.value);
+        valSatSpeed.textContent = `${satSpeedFactor.toFixed(1)}x (${Math.round(27000 * satSpeedFactor).toLocaleString()} km/h)`;
+      });
+
+      selectTrackingMode.addEventListener('change', (e) => {
+        trackingMode = e.target.value;
+      });
+
+      btnToggleSweep.addEventListener('click', () => {
+        isSweepActive = !isSweepActive;
+        btnToggleSweep.innerHTML = isSweepActive
+          ? `<span class="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span><span>Sweep Beam: ON</span>`
+          : `<span class="w-2 h-2 rounded-full bg-slate-500"></span><span>Sweep Beam: OFF</span>`;
+      });
+
+      btnSpawnSat.addEventListener('click', () => {
+        satellites.push(createSatellite());
+      });
+
+      btnResetRadar.addEventListener('click', resetConstellation);
+
+      btnExportTelemetry.addEventListener('click', () => {
+        const payload = telemetryTerminal.textContent;
+        const textArea = document.createElement("textarea");
+        textArea.value = payload;
+        document.body.appendChild(textArea);
+        textArea.select();
+        try {
+          document.execCommand('copy');
+          const original = btnExportTelemetry.innerHTML;
+          btnExportTelemetry.innerHTML = `<span class="text-emerald-400 font-bold">✓ Copied State JSON!</span>`;
+          setTimeout(() => { btnExportTelemetry.innerHTML = original; }, 2000);
+        } catch (err) {
+          console.error("Copy failed", err);
+        }
+        document.body.removeChild(textArea);
+      });
+
+      // ================= MASTER RADAR & KINEMATICS RENDER LOOP =================
+      let lastFrameTime = performance.now();
+
+      function render(currentTime) {
+        const dt = (currentTime - lastFrameTime) / 1000;
+        lastFrameTime = currentTime;
+
+        const rect = canvas.getBoundingClientRect();
+        const width = rect.width;
+        const height = rect.height;
+        const cx = width / 2;
+        const cy = height / 2;
+
+        ctx.clearRect(0, 0, width, height);
+
+        // 1. RENDER POLAR RADAR GRID & CONCENTRIC RANGE CIRCLES (Pure Math 2 Ch 2)
+        ctx.save();
+        ctx.translate(cx, cy);
+
+        // Concentric Range Circles: (x - cx)² + (y - cy)² = R²
+        // TASK 4 TARGET: Range Ring Array
+        const rangeRingsPx = [80, 160, 240, 320];
+        rangeRingsPx.forEach((rPx, idx) => {
+          ctx.beginPath();
+          ctx.arc(0, 0, rPx, 0, Math.PI * 2);
+          ctx.strokeStyle = (idx === rangeRingsPx.length - 1)
+            ? 'rgba(56, 189, 248, 0.4)'
+            : 'rgba(56, 189, 248, 0.15)';
+          ctx.lineWidth = 1;
+          ctx.setLineDash([4, 6]);
+          ctx.stroke();
+
+          // Distance labels in km
+          ctx.fillStyle = 'rgba(148, 163, 184, 0.6)';
+          ctx.font = '10px "Fira Code", monospace';
+          ctx.fillText(`${(idx + 1) * 150} km`, rPx + 4, -4);
+        });
+        ctx.setLineDash([]);
+
+        // Crosshairs: Principal Axes
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.2)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(-width / 2, 0); ctx.lineTo(width / 2, 0);
+        ctx.moveTo(0, -height / 2); ctx.lineTo(0, height / 2);
+        ctx.stroke();
+
+        // Cardinal Direction Labels
+        ctx.fillStyle = '#38bdf8';
+        ctx.font = 'bold 11px "Fira Code", monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('N [000°]', 0, -rangeRingsPx[rangeRingsPx.length - 1] - 10);
+        ctx.fillText('S [180°]', 0, rangeRingsPx[rangeRingsPx.length - 1] + 20);
+        ctx.fillText('E [090°]', rangeRingsPx[rangeRingsPx.length - 1] + 32, 4);
+        ctx.fillText('W [270°]', -rangeRingsPx[rangeRingsPx.length - 1] - 32, 4);
+
+        // 2. RADAR ROTATING SWEEP BEAM (Radian Geometry)
+        if (isSweepActive) {
+          sweepAngle += sweepSpeed * dt;
+          if (sweepAngle >= Math.PI * 2) sweepAngle -= Math.PI * 2;
+
+          const maxR = rangeRingsPx[rangeRingsPx.length - 1];
+
+          // Sweeping Light Cone (Gradient Pie Sector)
+          const sweepGrad = ctx.createRadialGradient(0, 0, 10, 0, 0, maxR);
+          sweepGrad.addColorStop(0, 'rgba(56, 189, 248, 0.35)');
+          sweepGrad.addColorStop(1, 'rgba(56, 189, 248, 0.0)');
+
+          ctx.beginPath();
+          ctx.moveTo(0, 0);
+          ctx.arc(0, 0, maxR, sweepAngle - 0.25, sweepAngle);
+          ctx.closePath();
+          ctx.fillStyle = sweepGrad;
+          ctx.fill();
+
+          // Leading Scan Line
+          ctx.beginPath();
+          ctx.moveTo(0, 0);
+          ctx.lineTo(Math.cos(sweepAngle) * maxR, Math.sin(sweepAngle) * maxR);
+          ctx.strokeStyle = '#38bdf8';
+          ctx.lineWidth = 1.8;
+          ctx.stroke();
+        }
+
+        // Station Center Node (Bujumbura Gateway)
+        ctx.beginPath();
+        ctx.arc(0, 0, 6, 0, Math.PI * 2);
+        ctx.fillStyle = '#ffffff';
+        ctx.shadowColor = '#38bdf8';
+        ctx.shadowBlur = 12;
+        ctx.fill();
+        ctx.restore();
+
+        // 3. SATELLITE KINEMATICS, VECTOR TRACKING & HANDOFF ENGINE
+        let activeLockedSat = null;
+        let highestElevation = -Infinity;
+
+        satellites.forEach((sat, index) => {
+          sat.x += sat.vx * satSpeedFactor;
+          sat.y += sat.vy * satSpeedFactor;
+
+          sat.trail.push({ x: sat.x, y: sat.y });
+          if (sat.trail.length > 25) sat.trail.shift();
+
+          const dx = sat.x - cx;
+          const dy = -(sat.y - cy);
+
+          const distPx = Math.hypot(dx, dy);
+          sat.lastRange = sat.currentRange || (distPx * 1.8);
+          sat.currentRange = distPx * 1.8;
+          sat.azimuthRad = Math.atan2(dy, dx);
+
+          const elevationRatio = Math.max(0, 1 - (distPx / 340));
+          sat.elevationDeg = elevationRatio * 90;
+
+          sat.rangeRateKmS = (sat.currentRange - sat.lastRange) / (dt || 0.016);
+
+          if (sat.x < -60 || sat.x > width + 60 || sat.y < -60 || sat.y > height + 60) {
+            satellites[index] = createSatellite();
+          }
+
+          if (trackingMode === 'auto') {
+            if (sat.elevationDeg >= horizonMaskAngle && sat.elevationDeg > highestElevation) {
+              highestElevation = sat.elevationDeg;
+              activeLockedSat = sat;
+            }
+          } else if (trackingMode === 'manual' && mouse.active) {
+            const mDist = Math.hypot(sat.x - mouse.x, sat.y - mouse.y);
+            if (mDist < 45) {
+              activeLockedSat = sat;
+            }
+          }
+        });
+
+        if (!activeLockedSat && satellites.length > 0) {
+          activeLockedSat = satellites[0];
+        }
+
+        // 4. RENDER SATELLITES & ACTIVE PHASED-ARRAY TRACKING BEAM
+        satellites.forEach((sat) => {
+          const isTarget = (sat === activeLockedSat);
+
+          if (sat.trail.length > 1) {
+            ctx.beginPath();
+            ctx.moveTo(sat.trail[0].x, sat.trail[0].y);
+            for (let i = 1; i < sat.trail.length; i++) {
+              ctx.lineTo(sat.trail[i].x, sat.trail[i].y);
+            }
+            ctx.strokeStyle = isTarget ? 'rgba(56, 189, 248, 0.4)' : 'rgba(148, 163, 184, 0.2)';
+            ctx.lineWidth = 1.2;
+            ctx.stroke();
+          }
+
+          if (isTarget) {
+            ctx.save();
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.lineTo(sat.x, sat.y);
+            ctx.strokeStyle = beamStrokeColor;
+            ctx.lineWidth = 2.5;
+            ctx.shadowColor = beamGlowColor;
+            ctx.shadowBlur = 16;
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.arc(sat.x, sat.y, 14, 0, Math.PI * 2);
+            ctx.strokeStyle = beamStrokeColor;
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([3, 3]);
+            ctx.stroke();
+            ctx.restore();
+          }
+
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(sat.x, sat.y, isTarget ? 5 : 3.5, 0, Math.PI * 2);
+          ctx.fillStyle = isTarget ? '#38bdf8' : (sat.elevationDeg >= horizonMaskAngle ? '#34d399' : '#94a3b8');
+          ctx.fill();
+
+          ctx.font = '10px "Fira Code", monospace';
+          ctx.fillStyle = isTarget ? '#ffffff' : '#64748b';
+          ctx.fillText(sat.callsign, sat.x + 8, sat.y - 4);
+          ctx.restore();
+        });
+
+        // 5. UPDATE TELEMETRY HUD & DATA STREAM TERMINAL
+        if (activeLockedSat) {
+          hudSatCallsign.textContent = activeLockedSat.callsign;
+          hudRange.textContent = `${activeLockedSat.currentRange.toFixed(1)} km`;
+          
+          const azimuthDeg = (((activeLockedSat.azimuthRad * 180) / Math.PI) + 360) % 360;
+          hudAzimuth.textContent = `${activeLockedSat.azimuthRad.toFixed(2)} rad (${azimuthDeg.toFixed(1)}°)`;
+          hudElevation.textContent = `${activeLockedSat.elevationDeg.toFixed(1)}° (${activeLockedSat.elevationDeg >= horizonMaskAngle ? 'LOS Locked' : 'MASKED'})`;
+
+          const f0_GHz = 12.0;
+          const speedOfLight_kmS = 299792;
+          const doppler_kHz = -((f0_GHz * 1e6 * activeLockedSat.rangeRateKmS) / speedOfLight_kmS);
+          const isApproaching = activeLockedSat.rangeRateKmS < 0;
+          hudDoppler.textContent = `${doppler_kHz.toFixed(1)} kHz (${isApproaching ? 'Approaching' : 'Receding'})`;
+          hudDoppler.className = isApproaching ? 'text-cyan-400 font-semibold' : 'text-amber-400 font-semibold';
+
+          const snr = Math.max(0, 16 - (activeLockedSat.currentRange / 70));
+          const mbps = Math.round(snr * 65);
+          hudSnr.textContent = `${snr.toFixed(1)} dB (${mbps} Mbps)`;
+
+          const telemetryPayload = {
+            gateway: "Bujumbura_Lake_Tanganyika_Uplink",
+            mission_id: "SPX-0101",
+            timestamp: new Date().toISOString(),
+            tracked_satellite: {
+              callsign: activeLockedSat.callsign,
+              orbital_altitude_km: activeLockedSat.altitudeKm.toFixed(1),
+              cartesian_vector: {
+                dx_km: parseFloat((activeLockedSat.x - cx).toFixed(2)),
+                dy_km: parseFloat(-(activeLockedSat.y - cy).toFixed(2))
+              },
+              polar_coordinates: {
+                slant_range_km: parseFloat(activeLockedSat.currentRange.toFixed(2)),
+                azimuth_rad: parseFloat(activeLockedSat.azimuthRad.toFixed(4)),
+                azimuth_deg: parseFloat(azimuthDeg.toFixed(2)),
+                elevation_deg: parseFloat(activeLockedSat.elevationDeg.toFixed(2))
+              },
+              kinematics: {
+                range_rate_km_s: parseFloat(activeLockedSat.rangeRateKmS.toFixed(3)),
+                doppler_shift_khz: parseFloat(doppler_kHz.toFixed(2)),
+                link_snr_db: parseFloat(snr.toFixed(1)),
+                throughput_mbps: mbps
+              },
+              phased_array_status: activeLockedSat.elevationDeg >= horizonMaskAngle ? "LOCK_ACQUIRED" : "HORIZON_MASKED"
+            },
+            constellation_fleet_size: satellites.length
+          };
+
+          telemetryTerminal.textContent = JSON.stringify(telemetryPayload, null, 2);
+        }
+
+        // 6. UPDATE ROSTER PANEL
+        metricSatCount.textContent = `${satellites.length} in Field`;
+        satelliteRosterList.innerHTML = '';
+        satellites.forEach(s => {
+          const isTarget = (s === activeLockedSat);
+          const item = document.createElement('div');
+          item.className = `p-2 rounded-lg border flex items-center justify-between cursor-pointer transition ${
+            isTarget
+              ? 'bg-cyan-950/40 border-cyan-700/60 text-white'
+              : 'bg-slate-950/40 border-slate-800/60 text-slate-400 hover:border-slate-700'
+          }`;
+          item.innerHTML = `
+            <div>
+              <div class="font-bold font-mono text-[11px] ${isTarget ? 'text-cyan-300' : 'text-slate-300'}">${s.callsign}</div>
+              <div class="text-[10px] text-slate-500 mono">El: ${s.elevationDeg.toFixed(0)}° • Range: ${s.currentRange.toFixed(0)} km</div>
+            </div>
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded ${
+              s.elevationDeg >= horizonMaskAngle
+                ? 'bg-emerald-950 text-emerald-300 border border-emerald-800/40'
+                : 'bg-slate-800 text-slate-400'
+            }">
+              ${s.elevationDeg >= horizonMaskAngle ? 'LINKABLE' : 'MASKED'}
+            </span>
+          `;
+          item.onclick = () => {
+            trackingMode = 'manual';
+            selectTrackingMode.value = 'manual';
+            satellites.forEach(st => st.locked = false);
+            s.locked = true;
+          };
+          satelliteRosterList.appendChild(item);
+        });
+
+        requestAnimationFrame(render);
+      }
+
+      requestAnimationFrame(render);
+    })();
+  </script>
+</body>
+</html>
